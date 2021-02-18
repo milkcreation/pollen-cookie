@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Pollen\Cookie;
 
-use Psr\Container\ContainerInterface as Container;
-use Symfony\Component\HttpFoundation\Cookie;
+use DateTimeInterface;
+use Symfony\Component\HttpFoundation\Cookie as BaseCookie;
 
 /**
  * @mixin \Pollen\Support\Concerns\ConfigBagTrait
@@ -14,188 +14,120 @@ use Symfony\Component\HttpFoundation\Cookie;
 interface CookieJarInterface
 {
     /**
-     * Suppression du cookie.
+     * Ajout dune instance de cookie.
+     *
+     * @param Cookie $cookie
      *
      * @return static
      */
-    public function clear(): CookieJarInterface;
+    public function add(Cookie $cookie): CookieJarInterface;
 
     /**
-     * Création de l'instance du cookie.
+     * Récupération des instances déclarées.
      *
-     * @param array|null ...$args {
-     *      @type string|array|null $value Valeur du cookie à définir.
-     *      @type int $expire
-     *      @type string|null $path
-     *      @type string|null $domain
-     *      @type boolean $secure
-     *      @type boolean $httpOnly
-     *      @type boolean $raw
-     *      @type string|null $sameSite
-     * }
-     *
-     * @return Cookie
+     * @return CookieJarInterface[]|BaseCookie[]|array
      */
-    public function create(?array ...$args): Cookie;
+    public function all(): array;
 
     /**
      * Récupération de la liste des cookies en attente de traitement dans la réponse globale.
      *
-     * @return Cookie[]|array
+     * @return Cookie[]|BaseCookie[]|array
      */
-    public static function fetchQueued(): array;
+    public function fetchQueued(): array;
 
     /**
-     * Récupération de la valeur d'un cookie.
+     * Récupération d'une instance déclarée selon son alias.
      *
-     * @param string|null $key Clé d'indice de la valeur. La valeur doit être un tableau. Syntaxe à point permise.
-     * @param mixed $default Valeur de retour par défaut.
+     * @param string $alias
      *
-     * @return mixed
+     * @return CookieInterface|BaseCookie|null
      */
-    public function get(?string $key = null, $default = null);
+    public function get(string $alias): ?CookieInterface;
 
     /**
-     * Récupération de l'instance du conteneur d'injection de dépendances.
+     * Récupération de la durée de disponibilité d'un cookie.
      *
-     * @return Container|null
+     * @param int|string|DateTimeInterface|null
+     *
+     * @return int
      */
-    public function getContainer(): ?Container;
+    public function getAvailability($lifetime = null): int;
 
     /**
-     * Récupération du nom de qualification du domaine du site associé.
+     * Récupération des paramètres de cookie par défaut.
+     *
+     * @param string|null $path
+     * @param string|null $domain
+     * @param bool|null $secure
+     * @param bool|null $httpOnly
+     * @param bool|null $raw
+     * @param string|null $sameSite
+     *
+     * @return array
+     */
+    public function getDefaults(
+        ?string $path = null,
+        ?string $domain = null,
+        ?bool $secure = null,
+        ?bool $httpOnly = null,
+        ?bool $raw = null,
+        ?string $sameSite = null
+    ): array;
+
+    /**
+     * Récupération du suffixe de salage du nom de qualification du cookie.
      *
      * @return string|null
      */
-    public function getDomain(): ?string;
+    public function getSalt(): ?string;
 
     /**
-     * Récupération du nom de qualification d'un cookie.
+     * Implémentation d'un instance de la classe.
      *
-     * @return string
+     * @param string $alias
+     * @param array $args.
+     *
+     * @return CookieInterface|BaseCookie
      */
-    public function getName(): string;
+    public function make(string $alias, array $args = []): CookieInterface;
 
     /**
-     * Récupération du chemin de validité des cookies.
+     * Définition des paramètres de cookie par défaut.
      *
-     * @return string
-     */
-    public function getPath(): ?string;
-
-    /**
-     * Vérifie si le cookie est en attente de traitement dans la réponse globale.
-     *
-     * @return bool
-     */
-    public function isQueued(): bool;
-
-    /**
-     * Implémentation d'un instance de cookie.
-     *
-     * @param string $alias Alias de qualification de l'instance.
-     * @param string|array|null $attrs Nom de qualification lorsque celui diffère de l'alias|attributs de configuration.
-     *
-     * @return static
-     */
-    public function make(string $alias, $attrs = null): CookieJarInterface;
-
-    /**
-     * Définition du cookie.
-     *
-     * @param string|array|null $value Valeur du cookie à définir.
-     * @param array|null ...$args {
-     *      Liste dynamique d'arguments complémentaires de définition du cookie.
-     *
-     *      @var int $expire
-     *      @var string|null $path
-     *      @var string|null $domain
-     *      @var boolean $secure
-     *      @var boolean $httpOnly
-     *      @var boolean $raw
-     *      @var string|null $sameSite
-     * }
-     *
-     * @return static
-     */
-    public function set($value = null, ?array ...$args): CookieJarInterface;
-
-    /**
-     * Définition de la liste des arguments par défaut.
-     *
-     * @param string|array|null $value
-     * @param int $expire
      * @param string|null $path
      * @param string|null $domain
-     * @param boolean|null $secure
-     * @param boolean $httpOnly
-     * @param boolean $raw
+     * @param bool|null $secure
+     * @param bool|null $httpOnly
+     * @param bool|null $raw
      * @param string|null $sameSite
      *
      * @return static
      */
-    public function setArgs(
-        $value = null,
-        int $expire = 0,
-        ?string $path = '/',
+    public function setDefaults(
+        ?string $path = null,
         ?string $domain = null,
         ?bool $secure = null,
-        bool $httpOnly = true,
-        bool $raw = false,
+        ?bool $httpOnly = null,
+        ?bool $raw = null,
         ?string $sameSite = null
     ): CookieJarInterface;
 
     /**
-     * Définition de l'activation de l'encodage en base64 de la valeurs des cookies.
+     * Définition de la durée de vie d'un cookie.
      *
-     * @param boolean $active
-     *
-     * @return static
-     */
-    public function setBase64(bool $active = false): CookieJarInterface;
-
-    /**
-     * Définition du nom de qualification du domaine du site associé.
-     *
-     * @param string|null $domain
+     * @param int|string|DateTimeInterface
      *
      * @return static
      */
-    public function setDomain(?string $domain = null): CookieJarInterface;
+    public function setLifetime($lifetime): CookieJarInterface;
 
     /**
-     * Définition du nom de qualification du cookie.
-     *
-     * @param string $name
-     *
-     * @return static
-     */
-    public function setName(string $name): CookieJarInterface;
-
-    /**
-     * Définition du chemin de validité des cookies.
-     *
-     * @param string|null $path
-     *
-     * @return static
-     */
-    public function setPath(?string $path = null): CookieJarInterface;
-
-    /**
-     * Définition de la mise en file du cookie pour un traitement dans la réponse globale.
-     *
-     * @param bool $queued
-     *
-     * @return static
-     */
-    public function setQueued(bool $queued = true): CookieJarInterface;
-
-    /**
-     * Définition du suffixe de Salage du nom de qualification des cookies.
+     * Définition du suffixe de salage du nom de qualification du cookie.
      *
      * @param string $salt
      *
      * @return static
      */
-    public function setSalt(string $salt = ''): CookieJarInterface;
+    public function setSalt(string $salt): CookieJarInterface;
 }

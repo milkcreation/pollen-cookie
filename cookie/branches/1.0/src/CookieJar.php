@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Pollen\Cookie;
 
+use DateTimeInterface;
+use InvalidArgumentException;
 use Pollen\Support\Concerns\ConfigBagTrait;
 use Pollen\Support\Concerns\ContainerAwareTrait;
-use Pollen\Validation\Validator as v;
-use Pollen\Support\Arr;
 use Psr\Container\ContainerInterface as Container;
-use Symfony\Component\HttpFoundation\Cookie;
+use RuntimeException;
 
 class CookieJar implements CookieJarInterface
 {
@@ -18,15 +18,9 @@ class CookieJar implements CookieJarInterface
 
     /**
      * Instances des cookies déclarées.
-     * @var CookieJarInterface[]
+     * @var CookieInterface[]|array
      */
-    public static $cookies = [];
-
-    /**
-     * Activation de l'encodage de la valeur du cookie en base64.
-     * @var boolean
-     */
-    protected $base64 = false;
+    protected $cookies = [];
 
     /**
      * Nom de qualification du domaine.
@@ -35,22 +29,16 @@ class CookieJar implements CookieJarInterface
     protected $domain;
 
     /**
-     * Délai d'expiration du cookie.
-     * @var int
+     * Durée de vie d'un cookie.
+     * @var int|string|DateTimeInterface
      */
-    protected $expire = 0;
+    protected $lifetime = 0;
 
     /**
      * Limitation de l'accessibilité du cookie au protocole HTTP.
-     * @var boolean
+     * @var bool
      */
     protected $httpOnly = true;
-
-    /**
-     * Nom de qualification du cookie.
-     * @var string
-     */
-    protected $name;
 
     /**
      * Chemin relatif de validation.
@@ -59,41 +47,35 @@ class CookieJar implements CookieJarInterface
     protected $path;
 
     /**
-     * Indicateur de mise en file du cookie en vue de son traitement dans la requête globale.
-     * @var bool
+     * Préfixe de qualification des valeur de cookie.
+     * @var string|null
      */
-    protected $queued = false;
+    protected $prefix;
 
     /**
      * Indicateur d'activation de l'encodage d'url lors de l'envoi du cookie.
-     * @var boolean
+     * @var bool
      */
     protected $raw = false;
 
     /**
      * Suffixe de salage du nom de qualification du cookie.
-     * @var string
+     * @var string|null
      */
-    protected $salt = '';
+    protected $salt;
 
     /**
      * Directive de permission d'envoi du cookie.
      * @see https://developer.mozilla.org/fr/docs/Web/HTTP/Headers/Set-Cookie
-     * @var string|null Strict|Lax
+     * @var string|null strict|lax
      */
-    protected $sameSite = false;
+    protected $sameSite;
 
     /**
      * Indicateur d'activation du protocole sécurisé HTTPS.
-     * @var boolean
+     * @var bool|null
      */
-    protected $secure = false;
-
-    /**
-     * Valeur d'enregistrement du cookie.
-     * @var mixed
-     */
-    protected $value;
+    protected $secure;
 
     /**
      * @param array $config
@@ -113,9 +95,9 @@ class CookieJar implements CookieJarInterface
     /**
      * @inheritDoc
      */
-    public function clear(): CookieJarInterface
+    public function add(Cookie $cookie): CookieJarInterface
     {
-        $this->setArgs(null, -(60 * 60 * 24 * 365 * 5))->setQueued();
+        $this->cookies[$cookie->getAlias()] = $cookie;
 
         return $this;
     }
@@ -123,122 +105,83 @@ class CookieJar implements CookieJarInterface
     /**
      * @inheritDoc
      */
-    public function create(?array ...$args): Cookie
+    public function all(): array
     {
-        $value = $args[0] ?? $this->value;
-
-        if (!is_null($value)) {
-            if (is_array($value)) {
-                $value = json_encode($value);
-            }
-
-            if ($this->base64) {
-                $value = base64_encode($value);
-            }
-        }
-
-        $expire = $args[1] ?? $this->expire;
-
-        $args = [
-            $this->getName(),
-            $value,
-            $expire === 0 ? 0 : time() + $expire,
-            $args[2] ?? $this->path,
-            $args[3] ?? $this->domain,
-            $args[4] ?? $this->secure,
-            $args[5] ?? $this->httpOnly,
-            $args[6] ?? $this->raw,
-            $args[7] ?? $this->sameSite,
-        ];
-
-        return new Cookie(...$args);
+        return $this->cookies;
     }
 
     /**
      * @inheritDoc
      */
-    public static function fetchQueued(): array
+    public function fetchQueued(): array
     {
         $queued = [];
-
-        foreach (self::$cookies as $cookie) {
+        foreach ($this->cookies as $cookie) {
             if ($cookie->isQueued()) {
-                $queued[] = $cookie->create();
-                $cookie->setQueued(false);
+                $queued[] = $cookie;
+                $cookie->unqueue();
             }
         }
-
         return $queued;
     }
 
     /**
      * @inheritDoc
      */
-    public function get(?string $key = null, $default = null)
+    public function get(string $alias): ?CookieInterface
     {
-        if (!$value = Request::cookie($this->getName())) {
-            return $default;
-        }
-
-        if (!$this->raw) {
-            $value = rawurldecode($value);
-        }
-
-        if ($this->base64 && v::base64()->validate($value)) {
-            $value = base64_decode($value);
-        }
-
-        if (v::json()->validate($value)) {
-            $value = json_decode($value, true);
-        }
-
-        return is_null($key) ? $value : Arr::get($value, $key, $default);
+        return $this->cookies[$alias] ?? null;
     }
 
     /**
      * @inheritDoc
      */
-    public function getDomain(): ?string
+    public function getAvailability($lifetime = null): int
     {
-        return $this->domain;
+        if ($lifetime === null) {
+            $lifetime = $this->lifetime;
+        }
+
+        if (!is_int($lifetime) && !is_string($lifetime) && !$lifetime instanceof DateTimeInterface) {
+            throw new RuntimeException(
+                'Unable to determine cookie availability, must require an int type or type string or DateTimeInterface instance for expiration value'
+            );
+        }
+
+        if (!is_numeric($lifetime)) {
+            $lifetime = strtotime($lifetime);
+
+            if (false === $lifetime) {
+                throw new InvalidArgumentException(
+                    'Unable to determine cookie availability, textual datetime could not parsed into a Unix timestamp'
+                );
+            }
+        }
+
+        if ($lifetime === 0) {
+            return 0;
+        }
+
+        return $lifetime instanceof DateTimeInterface ? $lifetime->getTimestamp() : time() + $lifetime;
     }
 
     /**
      * @inheritDoc
      */
-    public function getName(): string
-    {
-        return $this->name . $this->salt;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function getPath(): ?string
-    {
-        return $this->path;
-    }
-
-    /**
-     * Get the path and domain, or the default values.
-     *
-     * @param string $path
-     * @param string $domain
-     * @param bool|null $secure
-     * @param string|null $sameSite
-     *
-     * @return array
-     */
-    protected function getPathAndDomain(
-        string $path,
-        string $domain,
+    public function getDefaults(
+        ?string $path = null,
+        ?string $domain = null,
         ?bool $secure = null,
+        ?bool $httpOnly = null,
+        ?bool $raw = null,
         ?string $sameSite = null
     ): array {
         return [
             $path ?: $this->path,
             $domain ?: $this->domain,
-            is_bool($secure) ? $secure : $this->secure,
+            $secure ?: $this->secure,
+            filter_var($httpOnly ?? $this->httpOnly, FILTER_VALIDATE_BOOLEAN),
+            filter_var($raw ?? $this->raw, FILTER_VALIDATE_BOOLEAN),
             $sameSite ?: $this->sameSite,
         ];
     }
@@ -246,98 +189,52 @@ class CookieJar implements CookieJarInterface
     /**
      * @inheritDoc
      */
-    public function isQueued(): bool
+    public function getSalt(): ?string
     {
-        return $this->queued;
+        return $this->salt;
     }
 
     /**
      * @inheritDoc
      */
-    public function make(string $alias, $attrs = null): CookieJarInterface
+    public function make(string $alias, array $args = []): CookieInterface
     {
-        if (!isset(self::$cookies[$alias])) {
-            $cookie = ($provided = $this->getContainer()->get('cookie')) ? clone $provided : new static();
-
-            if (is_null($attrs)) {
-                $cookie->setName($alias);
-            } elseif (is_string($attrs)) {
-                $cookie->setName($attrs);
-            } elseif (is_array($attrs)) {
-                $cookie->setName(isset($attrs['name']) ? (string)$attrs['name'] : $alias);
-
-                if (isset($attrs['base64'])) {
-                    $cookie->setBase64(filter_var($attrs['base64'], FILTER_VALIDATE_BOOLEAN));
-                }
-
-                if (isset($attrs['salt'])) {
-                    $cookie->setSalt((string)$attrs['salt']);
-                }
-
-                [$path, $domain, $secure, $sameSite] = $this->getPathAndDomain();
-
-                $cookie->setArgs(
-                    $attrs['value'] ?? null,
-                    isset($attrs['expire']) ? (int)$attrs['expire'] : 0,
-                    isset($attrs['path']) ? (string)$attrs['path'] : $cookie->getPath(),
-                    isset($attrs['domain']) ? (string)$attrs['domain'] : $cookie->getDomain(),
-                    isset($attrs['secure']) ? filter_var($attrs['secure'] ?? true, FILTER_VALIDATE_BOOLEAN) : null,
-                    filter_var($attrs['httpOnly'] ?? true, FILTER_VALIDATE_BOOLEAN),
-                    filter_var($attrs['raw'] ?? false, FILTER_VALIDATE_BOOLEAN),
-                    isset($attrs['sameSite']) ? (string)$attrs['sameSite'] : null
-                );
-            }
-
-            self::$cookies[$alias] = $cookie;
-        }
-
-        return self::$cookies[$alias];
+        return $this->cookies[$alias] = new Cookie($alias, $args, $this);
     }
 
     /**
      * @inheritDoc
      */
-    public function set($value = null, ?array ...$args): CookieJarInterface
-    {
-        return $this->setArgs($value, ...$args)->setQueued();
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function setArgs(
-        $value = null,
-        int $expire = 0,
+    public function setDefaults(
         ?string $path = null,
         ?string $domain = null,
         ?bool $secure = null,
-        bool $httpOnly = true,
-        bool $raw = false,
-        string $sameSite = null
+        ?bool $httpOnly = null,
+        ?bool $raw = null,
+        ?string $sameSite = null
     ): CookieJarInterface {
-        [
-            $this->value,
-            $this->expire,
-            $this->path,
-            $this->domain,
-            $this->secure,
-            $this->httpOnly,
-            $this->raw,
-            $this->sameSite,
-        ] = [$value, $expire, $path, $domain, $secure, $httpOnly, $raw, $sameSite];
+        [$this->path, $this->domain, $this->secure, $this->httpOnly, $this->raw, $this->sameSite] = [
+            $path,
+            $domain,
+            $secure,
+            filter_var($httpOnly ?? true, FILTER_VALIDATE_BOOLEAN),
+            filter_var($raw ?? false, FILTER_VALIDATE_BOOLEAN),
+            $sameSite,
+        ];
 
-        if (is_null($this->path)) {
-            $this->path = rtrim(ltrim(Url::rewriteBase(), '/'), '/');
-            $this->path = $this->path ? "/{$this->path}/" : '/';
+        return $this;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function setLifetime($lifetime): CookieJarInterface
+    {
+        if (!is_int($lifetime) && !is_string($lifetime) && !$lifetime instanceof DateTimeInterface) {
+            $lifetime = 0;
         }
 
-        if (is_null($this->domain)) {
-            $this->domain = Request::getHost();
-        }
-
-        if (is_null($this->secure)) {
-            $this->secure = Request::isSecure();
-        }
+        $this->lifetime = $lifetime;
 
         return $this;
     }
@@ -345,57 +242,7 @@ class CookieJar implements CookieJarInterface
     /**
      * @inheritDoc
      */
-    public function setBase64(bool $active = false): CookieJarInterface
-    {
-        $this->base64 = $active;
-
-        return $this;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function setDomain(?string $domain = null): CookieJarInterface
-    {
-        $this->domain = $domain;
-
-        return $this;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function setName(string $name): CookieJarInterface
-    {
-        $this->name = $name;
-
-        return $this;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function setPath(?string $path = null): CookieJarInterface
-    {
-        $this->path = $path;
-
-        return $this;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function setQueued(bool $queued = true): CookieJarInterface
-    {
-        $this->queued = $queued;
-
-        return $this;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function setSalt(string $salt = ''): CookieJarInterface
+    public function setSalt(string $salt): CookieJarInterface
     {
         $this->salt = $salt;
 

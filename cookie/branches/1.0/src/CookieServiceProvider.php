@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Pollen\Cookie;
 
+use Pollen\Cookie\Middleware\QueuedCookiesMiddleware;
 use Pollen\Container\BaseServiceProvider;
 
 class CookieServiceProvider extends BaseServiceProvider
@@ -13,6 +14,7 @@ class CookieServiceProvider extends BaseServiceProvider
      */
     protected $provides = [
         CookieJarInterface::class,
+        'routing.middleware.queued-cookies'
     ];
 
     /**
@@ -37,5 +39,19 @@ class CookieServiceProvider extends BaseServiceProvider
                 ));
             }
         );
+
+        $this->registerMiddlewares();
+    }
+
+    /**
+     * Déclaration des middlewares.
+     *
+     * @return void
+     */
+    public function registerMiddlewares(): void
+    {
+        $this->getContainer()->add('routing.middleware.queued-cookies', function () {
+            return new QueuedCookiesMiddleware($this->getContainer()->get(CookieJarInterface::class));
+        });
     }
 }
