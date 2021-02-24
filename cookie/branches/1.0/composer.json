@@ -1,13 +1,13 @@
 {
   "name": "pollen-solutions/cookie",
-  "description": "Pollen Cookie Component",
+  "description": "Pollen Cookie Component - Cookies repository",
   "homepage": "https://www.presstify.com/pollen-solutions/cookie/",
   "keywords": [
     "pollen-solutions",
     "component",
     "cookie"
   ],
-  "time": "2021-02-18",
+  "time": "2021-02-24",
   "license": "MIT",
   "authors": [
     {
