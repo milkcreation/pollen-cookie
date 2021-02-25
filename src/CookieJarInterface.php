@@ -8,7 +8,7 @@ use DateTimeInterface;
 use Symfony\Component\HttpFoundation\Cookie as BaseCookie;
 
 /**
- * @mixin \Pollen\Support\Concerns\ConfigBagTrait
+ * @mixin \Pollen\Support\Concerns\ConfigBagAwareTrait
  * @mixin \Pollen\Support\Concerns\ContainerAwareTrait
  */
 interface CookieJarInterface
