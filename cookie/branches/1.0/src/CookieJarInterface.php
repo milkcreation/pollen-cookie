@@ -5,13 +5,11 @@ declare(strict_types=1);
 namespace Pollen\Cookie;
 
 use DateTimeInterface;
+use Pollen\Support\Concerns\ConfigBagAwareTraitInterface;
+use Pollen\Support\Proxy\ContainerProxyInterface;
 use Symfony\Component\HttpFoundation\Cookie as BaseCookie;
 
-/**
- * @mixin \Pollen\Support\Concerns\ConfigBagAwareTrait
- * @mixin \Pollen\Support\Concerns\ContainerAwareTrait
- */
-interface CookieJarInterface
+interface CookieJarInterface extends ContainerProxyInterface, ConfigBagAwareTraitInterface
 {
     /**
      * Ajout dune instance de cookie.
