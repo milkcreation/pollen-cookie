@@ -7,14 +7,14 @@ namespace Pollen\Cookie;
 use DateTimeInterface;
 use InvalidArgumentException;
 use Pollen\Support\Concerns\ConfigBagAwareTrait;
-use Pollen\Support\Concerns\ContainerAwareTrait;
+use Pollen\Support\Proxy\ContainerProxy;
 use Psr\Container\ContainerInterface as Container;
 use RuntimeException;
 
 class CookieJar implements CookieJarInterface
 {
     use ConfigBagAwareTrait;
-    use ContainerAwareTrait;
+    use ContainerProxy;
 
     /**
      * Instances des cookies déclarées.
