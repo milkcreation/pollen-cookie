@@ -6,14 +6,16 @@ namespace Pollen\Cookie;
 
 use Exception;
 use Pollen\Encryption\Encrypter;
-use Pollen\Http\Request;
 use Pollen\Http\RequestInterface;
 use Pollen\Validation\Validator as v;
+use Pollen\Support\Proxy\HttpRequestProxy;
 use Symfony\Component\HttpFoundation\Cookie as BaseCookie;
 use RuntimeException;
 
 class Cookie extends BaseCookie implements CookieInterface
 {
+    use HttpRequestProxy;
+
     /**
      * Alias de qualification de l'instance.
      * @var string
@@ -61,6 +63,7 @@ class Cookie extends BaseCookie implements CookieInterface
         $name = str_replace('.', '_', $name);
 
         $value = $args['value'] ?? null;
+
         if ($value !== null && !is_string($value)) {
             try {
                 $value = json_encode($value, JSON_THROW_ON_ERROR);
@@ -102,6 +105,20 @@ class Cookie extends BaseCookie implements CookieInterface
     /**
      * @inheritDoc
      */
+    public function checkRequestValue(?RequestInterface $request = null, $value = null): bool
+    {
+        $httpValue = $this->httpValue($request);
+
+        if ($value === null) {
+            $value = $this->getValue();
+        }
+
+        return $httpValue !== null && $value === $httpValue;
+    }
+
+    /**
+     * @inheritDoc
+     */
     public function clear(): CookieInterface
     {
         return $this->withValue(null)->withExpires(time() - (60 * 60 * 24 * 365 * 5));
@@ -136,7 +153,9 @@ class Cookie extends BaseCookie implements CookieInterface
      */
     public function httpValue(?RequestInterface $request = null)
     {
-        $request = $request ?: Request::getFromGlobals();
+        if ($request === null) {
+            $request = $this->httpRequest();
+        }
 
         if (!$value = $request->cookies->get($this->getName())) {
             return null;
@@ -152,7 +171,7 @@ class Cookie extends BaseCookie implements CookieInterface
             $value = $this->decrypt($value);
         }
 
-        if (v::json()->validate($value)) {
+        if (!is_numeric($value) && v::json()->validate($value)) {
             try {
                 $value = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
             } catch (Exception $e) {

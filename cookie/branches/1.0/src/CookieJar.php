@@ -17,6 +17,12 @@ class CookieJar implements CookieJarInterface
     use ContainerProxy;
 
     /**
+     * Instance principale.
+     * @var static|null
+     */
+    private static $instance;
+
+    /**
      * Instances des cookies déclarées.
      * @var CookieInterface[]|array
      */
@@ -90,6 +96,23 @@ class CookieJar implements CookieJarInterface
         if ($container !== null) {
             $this->setContainer($container);
         }
+
+        if (!self::$instance instanceof static) {
+            self::$instance = $this;
+        }
+    }
+
+    /**
+     * Récupération de l'instance principale.
+     *
+     * @return static
+     */
+    public static function getInstance(): CookieJarInterface
+    {
+        if (self::$instance instanceof self) {
+            return self::$instance;
+        }
+        throw new RuntimeException(sprintf('Unavailable [%s] instance', __CLASS__));
     }
 
     /**
