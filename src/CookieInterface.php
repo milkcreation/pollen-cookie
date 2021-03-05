@@ -5,12 +5,23 @@ declare(strict_types=1);
 namespace Pollen\Cookie;
 
 use Pollen\Http\RequestInterface;
+use Pollen\Support\Proxy\HttpRequestProxyInterface;
 
 /**
  * @mixin \Symfony\Component\HttpFoundation\Cookie
  */
-interface CookieInterface
+interface CookieInterface extends HttpRequestProxyInterface
 {
+    /**
+     * Vérification de validité de la valeur dans la requête HTTP.
+     *
+     * @param RequestInterface|null $request
+     * @param mixed|null $value
+     *
+     * @return bool
+     */
+    public function checkRequestValue(?RequestInterface $request = null, $value = null): bool;
+
     /**
      * Suppression du cookie.
      *

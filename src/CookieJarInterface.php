@@ -84,7 +84,7 @@ interface CookieJarInterface extends ContainerProxyInterface, ConfigBagAwareTrai
      * Implémentation d'un instance de la classe.
      *
      * @param string $alias
-     * @param array $args.
+     * @param array $args
      *
      * @return CookieInterface|BaseCookie
      */
