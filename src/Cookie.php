@@ -72,20 +72,17 @@ class Cookie extends BaseCookie implements CookieInterface
             }
         }
 
-        $encrypted = filter_var($args['encrypted'] ?? $this->encrypted, FILTER_VALIDATE_BOOLEAN);
-        if ($value !== null && $encrypted) {
-            $this->encrypted = true;
+        $this->encrypted = filter_var($args['encrypted'] ?? $this->encrypted, FILTER_VALIDATE_BOOLEAN);
+        if ($value !== null && $this->encrypted) {
             $value = $this->encrypt($value);
         }
 
-        $prefix = $args['prefix'] ?? false;
-        if ($value !== null && $prefix) {
+        $this->prefix = $args['prefix'] ?? false;
+        if ($value !== null && $this->prefix) {
             if (!is_string($args['prefix'])) {
                 throw new RuntimeException('Cookie could not prefix cookie value');
             }
-            $this->prefix = $prefix;
-
-            $value = $prefix . $value;
+            $value = $this->prefix . $value;
         }
 
         $expire = $cookieJar->getAvailability($args['lifetime'] ?? null);
@@ -181,7 +178,7 @@ class Cookie extends BaseCookie implements CookieInterface
 
         return $value;
     }
-
+    
     /**
      * @inheritDoc
      */
