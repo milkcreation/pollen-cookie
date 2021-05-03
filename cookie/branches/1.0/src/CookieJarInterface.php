@@ -14,16 +14,16 @@ interface CookieJarInterface extends ContainerProxyInterface, ConfigBagAwareTrai
     /**
      * Ajout dune instance de cookie.
      *
-     * @param Cookie $cookie
+     * @param CookieInterface $cookie
      *
      * @return static
      */
-    public function add(Cookie $cookie): CookieJarInterface;
+    public function add(CookieInterface $cookie): CookieJarInterface;
 
     /**
      * Récupération des instances déclarées.
      *
-     * @return CookieJarInterface[]|BaseCookie[]|array
+     * @return CookieInterface[]|BaseCookie[]|array
      */
     public function all(): array;
 

@@ -30,28 +30,10 @@ class CookieJar implements CookieJarInterface
     protected $cookies = [];
 
     /**
-     * Nom de qualification du domaine.
-     * @var string|null
-     */
-    protected $domain;
-
-    /**
      * Durée de vie d'un cookie.
      * @var int|string|DateTimeInterface
      */
     protected $lifetime = 0;
-
-    /**
-     * Limitation de l'accessibilité du cookie au protocole HTTP.
-     * @var bool
-     */
-    protected $httpOnly = true;
-
-    /**
-     * Chemin relatif de validation.
-     * @var string|null
-     */
-    protected $path;
 
     /**
      * Préfixe de qualification des valeur de cookie.
@@ -60,29 +42,47 @@ class CookieJar implements CookieJarInterface
     protected $prefix;
 
     /**
-     * Indicateur d'activation de l'encodage d'url lors de l'envoi du cookie.
-     * @var bool
-     */
-    protected $raw = false;
-
-    /**
      * Suffixe de salage du nom de qualification du cookie.
      * @var string|null
      */
     protected $salt;
 
     /**
+     * Nom de qualification du domaine.
+     * @var string|null
+     */
+    public $domain;
+
+    /**
+     * Limitation de l'accessibilité du cookie au protocole HTTP.
+     * @var bool
+     */
+    public $httpOnly = true;
+
+    /**
+     * Chemin relatif de validation.
+     * @var string|null
+     */
+    public $path;
+
+    /**
+     * Indicateur d'activation de l'encodage d'url lors de l'envoi du cookie.
+     * @var bool
+     */
+    public $raw = false;
+
+    /**
      * Directive de permission d'envoi du cookie.
      * @see https://developer.mozilla.org/fr/docs/Web/HTTP/Headers/Set-Cookie
      * @var string|null strict|lax
      */
-    protected $sameSite;
+    public $sameSite;
 
     /**
      * Indicateur d'activation du protocole sécurisé HTTPS.
      * @var bool|null
      */
-    protected $secure;
+    public $secure;
 
     /**
      * @param array $config
@@ -119,7 +119,7 @@ class CookieJar implements CookieJarInterface
     /**
      * @inheritDoc
      */
-    public function add(Cookie $cookie): CookieJarInterface
+    public function add(CookieInterface $cookie): CookieJarInterface
     {
         $this->cookies[$cookie->getAlias()] = $cookie;
 
