@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Pollen\Cookie;
 
 use Pollen\Cookie\Middleware\QueuedCookiesMiddleware;
-use Pollen\Container\BaseServiceProvider;
+use Pollen\Container\BootableServiceProvider;
 
-class CookieServiceProvider extends BaseServiceProvider
+class CookieServiceProvider extends BootableServiceProvider
 {
     /**
      * @var string[]
