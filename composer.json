@@ -1,25 +1,19 @@
 {
   "name": "pollen-solutions/cookie",
   "description": "Pollen Cookie Component - Cookies repository",
-  "homepage": "https://www.presstify.com/pollen-solutions/cookie/",
+  "homepage": "https://github.com/milkcreation/pollen-cookie.git",
   "keywords": [
     "pollen-solutions",
     "component",
     "cookie"
   ],
-  "time": "2021-05-11",
+  "time": "2021-09-14",
   "license": "MIT",
   "authors": [
     {
       "name": "Jordy Manner",
       "email": "jordy@presstify.com",
       "role": "Developper"
-    }
-  ],
-  "repositories": [
-    {
-      "type": "composer",
-      "url": "https://composer.presstify.com/pollen-solutions/"
     }
   ],
   "require": {
